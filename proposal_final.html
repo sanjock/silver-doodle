@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>공공 시스템 구축 제안서</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background: #f4f7f9; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        h1 { color: #0055a5; border-bottom: 3px solid #0055a5; padding-bottom: 10px; text-align: center; }
+        h2 { color: #0078d4; margin-top: 30px; border-left: 5px solid #0078d4; padding-left: 15px; }
+        .scenario-box { background: #eef5ff; padding: 20px; border-radius: 8px; margin: 15px 0; }
+        .tech-tag { display: inline-block; background: #0055a5; color: white; padding: 2px 10px; border-radius: 15px; font-size: 0.85em; margin-right: 5px; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+        .footer { margin-top: 50px; text-align: center; font-size: 0.95em; color: #444; border-top: 2px solid #0055a5; padding-top: 20px; line-height: 1.8; }
+        .contact-info { font-weight: bold; margin-bottom: 10px; }
+        .links a { display: inline-block; margin: 0 15px; color: #0055a5; text-decoration: none; font-weight: bold; border: 1px solid #0055a5; padding: 5px 15px; border-radius: 5px; transition: 0.3s; }
+        .links a:hover { background: #0055a5; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>공공 정보시스템 구축 제안</h1>
+        <p style="text-align: right;"><strong>기술 스택:</strong> Nexacro N / eGovFrame / Tibero DB / MyBatis</p>
+
+        <h2>01. 대국민 민원 통합 실시간 대시보드</h2>
+        <div class="scenario-box">
+            <span class="tech-tag">시각화</span> <span class="tech-tag">대용량 처리</span> <span class="tech-tag">OSMU</span>
+            <p><strong>개요:</strong> 전국 단위로 접수되는 민원 데이터를 실시간으로 수집하여 행정 지표를 시각화하는 시스템입니다.</p>
+            <ul>
+                <li><strong>핵심 기능:</strong> 지역별 민원 밀집도(Heatmap), 처리 지연 알림, 부서별 처리율 비교 차트.</li>
+                <li><strong>개발 포인트:</strong> 넥사크로 Chart 컴포넌트를 활용해 동적인 화면을 구성하고, 티베로의 집계 쿼리를 이용해 대량 데이터를 빠르게 가공합니다.</li>
+            </ul>
+        </div>
+
+        <h2>02. 공공 자산 및 유지보수 이력 관리 시스템</h2>
+        <div class="scenario-box">
+            <span class="tech-tag">데이터 정밀도</span> <span class="tech-tag">그리드 제어</span> <span class="tech-tag">Batch</span>
+            <p><strong>개요:</strong> 공공기관 내 유·무형 자산의 취득부터 폐기까지 전 과정을 관리하고 유지보수 이력을 기록합니다.</p>
+            <ul>
+                <li><strong>핵심 기능:</strong> 자산 바코드 연동, 유지보수 스케줄 관리, 수천 건의 자산 정보 일괄 수정(Multi-row Edit).</li>
+                <li><strong>개발 포인트:</strong> 넥사크로 Grid의 Dataset을 활용해 다중 행 편집을 구현하며, MyBatis의 foreach 태그로 티베로 DB에 일괄 저장합니다.</li>
+            </ul>
+        </div>
+
+        <h2>03. 지능형 전자결재 및 행정 워크플로우</h2>
+        <div class="scenario-box">
+            <span class="tech-tag">보안</span> <span class="tech-tag">권한관리</span> <span class="tech-tag">트랜잭션</span>
+            <p><strong>개요:</strong> 공공기관의 복잡한 결재 라인을 유연하게 설정하고 보안 가이드라인을 준수하는 전자결재 시스템입니다.</p>
+            <ul>
+                <li><strong>핵심 기능:</strong> 동적 결재선 지정, 개인정보 마스킹 처리, 접속 이력 로그 감사.</li>
+                <li><strong>개발 포인트:</strong> eGovFrame Spring Security와 연동하여 메뉴 권한을 제어하고, 티베로의 트랜잭션 관리로 데이터 무결성을 보장합니다.</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>본 시나리오는 <strong>공공 시스템 구축</strong>을 위해 최적화된 기술 스택을 바탕으로 설계되었습니다.</p>
+            <div class="contact-info">
+                전화: 010-8384-4991 &nbsp;&nbsp; | &nbsp;&nbsp; 이메일: contact@dumokdatalab.com
+            </div>
+            <div class="links">
+                <a href="https://sanjock.github.io/silver-doodle/Resume.pdf" target="_blank">이력서 확인하기</a>
+                <a href="https://sanjock.github.io/silver-doodle/HD.JPG" target="_blank">수료증 확인하기</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
