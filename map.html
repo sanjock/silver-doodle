@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet 전체화면 지도 - 완벽 버전</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* 1. 전체 초기화 - 매우 중요! */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 2. html, body 100% 설정 - 필수! */
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* 스크롤바 제거 */
+        }
+        
+        /* 3. 지도 컨테이너 - 100% 채우기 */
+        #map {
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        /* 4. 로딩 인디케이터 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 5. 컨트롤 패널 */
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            max-width: 300px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .control-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+        
+        .button-group {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.5);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+        
+        .info-box {
+            margin-top: 15px;
+            padding: 12px;
+            background: #ecf0f1;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #34495e;
+        }
+        
+        .info-item {
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        /* 6. 상태 표시 */
+        .status-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            font-size: 13px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-loading {
+            background: #f39c12;
+        }
+        
+        .status-ready {
+            background: #27ae60;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* 7. 커스텀 팝업 */
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .custom-popup {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 10px;
+        }
+        
+        .popup-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .popup-content {
+            font-size: 13px;
+            color: #7f8c8d;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <!-- 로딩 오버레이 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div>지도를 불러오는 중...</div>
+        </div>
+    </div>
+    
+    <!-- 지도 컨테이너 -->
+    <div id="map"></div>
+    
+    <!-- 컨트롤 패널 -->
+    <div class="control-panel">
+        <div class="control-title">🗺️ 지도 컨트롤</div>
+        
+        <div class="button-group">
+            <button class="btn" onclick="goToSeoul()">📍 서울시청</button>
+            <button class="btn" onclick="goToGangnam()">🏙️ 강남역</button>
+            <button class="btn" onclick="goToBusan()">🌊 부산</button>
+            <button class="btn btn-secondary" onclick="addMarkers()">📌 마커 추가</button>
+            <button class="btn btn-secondary" onclick="clearMarkers()">🗑️ 마커 제거</button>
+            <button class="btn btn-secondary" onclick="toggleFullscreen()">⛶ 전체화면</button>
+        </div>
+        
+        <div class="info-box">
+            <div class="info-item">
+                <span class="info-label">줌 레벨:</span>
+                <span id="zoomLevel">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">중심 좌표:</span>
+                <div id="centerCoords">-</div>
+            </div>
+            <div class="info-item">
+                <span class="info-label">로딩 타일:</span>
+                <span id="tileCount">0</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 상태 표시 -->
+    <div class="status-indicator">
+        <span class="status-dot status-loading" id="statusDot"></span>
+        <span id="statusText">초기화 중...</span>
+    </div>
+    
+    <script>
+        // ==========================================
+        // 1. 전역 변수
+        // ==========================================
+        let map = null;
+        let markers = [];
+        let tileLoadCount = 0;
+        
+        // ==========================================
+        // 2. 지도 초기화 (핵심!)
+        // ==========================================
+        function initializeMap() {
+            console.log('지도 초기화 시작...');
+            
+            // 지도 생성
+            map = L.map('map', {
+                center: [37.5665, 126.9780], // 서울시청
+                zoom: 17,
+                zoomControl: true,
+                attributionControl: true,
+                // 중요: 타일 로딩 최적화 옵션
+                preferCanvas: false,
+                renderer: L.canvas()
+            });
+            
+            // 타일 레이어 추가
+            const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19,
+                minZoom: 5,
+                // 중요: 타일 로딩 옵션
+                keepBuffer: 2, // 화면 밖 타일 유지
+                updateWhenZooming: false, // 줌 중 업데이트 안 함 (성능)
+                updateWhenIdle: true, // 이동 멈춘 후 업데이트
+                crossOrigin: true
+            });
+            
+            tileLayer.addTo(map);
+            
+            // 타일 로딩 이벤트 리스너
+            tileLayer.on('loading', function() {
+                tileLoadCount++;
+                updateStatus('loading', '타일 로딩 중...');
+                document.getElementById('tileCount').textContent = tileLoadCount;
+            });
+            
+            tileLayer.on('load', function() {
+                updateStatus('ready', '준비 완료');
+                console.log('모든 타일 로드 완료');
+            });
+            
+            tileLayer.on('tileerror', function(error) {
+                console.error('타일 로드 실패:', error);
+            });
+            
+            // 지도 이벤트 리스너
+            map.on('zoomend', updateMapInfo);
+            map.on('moveend', updateMapInfo);
+            
+            // 초기 정보 업데이트
+            updateMapInfo();
+            
+            console.log('지도 초기화 완료');
+        }
+        
+        // ==========================================
+        // 3. 지도 크기 재조정 (문제 해결 핵심!)
+        // ==========================================
+        function fixMapSize() {
+            console.log('지도 크기 재조정 시작...');
+            
+            // 여러 번 시도 (타이밍 문제 해결)
+            const delays = [0, 100, 250, 500];
+            
+            delays.forEach(delay => {
+                setTimeout(() => {
+                    if (map) {
+                        map.invalidateSize({
+                            animate: false,
+                            pan: false
+                        });
+                        console.log(`invalidateSize 실행 (${delay}ms)`);
+                    }
+                }, delay);
+            });
+        }
+        
+        // ==========================================
+        // 4. 상태 업데이트
+        // ==========================================
+        function updateStatus(status, text) {
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            dot.className = 'status-dot status-' + status;
+            statusText.textContent = text;
+        }
+        
+        function updateMapInfo() {
+            if (!map) return;
+            
+            const center = map.getCenter();
+            const zoom = map.getZoom();
+            
+            document.getElementById('zoomLevel').textContent = zoom;
+            document.getElementById('centerCoords').innerHTML = 
+                `${center.lat.toFixed(6)}<br>${center.lng.toFixed(6)}`;
+        }
+        
+        // ==========================================
+        // 5. 위치 이동 함수들
+        // ==========================================
+        function goToSeoul() {
+            map.flyTo([37.5665, 126.9780], 17, {
+                duration: 1.5
+            });
+        }
+        
+        function goToGangnam() {
+            map.flyTo([37.4979, 127.0276], 17, {
+                duration: 1.5
+            });
+        }
+        
+        function goToBusan() {
+            map.flyTo([35.1796, 129.0756], 15, {
+                duration: 2
+            });
+        }
+        
+        // ==========================================
+        // 6. 마커 관리
+        // ==========================================
+        function addMarkers() {
+            // 기존 마커 제거
+            clearMarkers();
+            
+            const locations = [
+                { pos: [37.5665, 126.9780], name: '서울시청', desc: '서울특별시청 본관' },
+                { pos: [37.5797, 126.9770], name: '경복궁', desc: '조선시대 궁궐' },
+                { pos: [37.5511, 126.9882], name: '남산타워', desc: 'N서울타워' }
+            ];
+            
+            locations.forEach(loc => {
+                const marker = L.marker(loc.pos).addTo(map);
+                
+                const popupContent = `
+                    <div class="custom-popup">
+                        <div class="popup-title">${loc.name}</div>
+                        <div class="popup-content">${loc.desc}</div>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                markers.push(marker);
+            });
+            
+            // 첫 마커 열기
+            if (markers.length > 0) {
+                markers[0].openPopup();
+            }
+            
+            console.log(`${markers.length}개 마커 추가됨`);
+        }
+        
+        function clearMarkers() {
+            markers.forEach(marker => {
+                map.removeLayer(marker);
+            });
+            markers = [];
+            console.log('모든 마커 제거됨');
+        }
+        
+        // ==========================================
+        // 7. 전체화면 토글
+        // ==========================================
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+        
+        // 전체화면 변경 시 지도 크기 재조정
+        document.addEventListener('fullscreenchange', () => {
+            setTimeout(() => fixMapSize(), 100);
+        });
+        
+        // ==========================================
+        // 8. 초기화 시퀀스 (매우 중요!)
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM 로드 완료');
+            
+            // 1단계: 지도 초기화
+            initializeMap();
+            
+            // 2단계: 크기 재조정 (여러 번)
+            fixMapSize();
+            
+            // 3단계: 로딩 오버레이 제거
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                console.log('로딩 완료');
+                
+                // 4단계: 최종 크기 재조정
+                fixMapSize();
+            }, 1000);
+        });
+        
+        // ==========================================
+        // 9. 창 크기 변경 대응
+        // ==========================================
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                console.log('창 크기 변경 감지');
+                fixMapSize();
+            }, 250);
+        });
+        
+        // ==========================================
+        // 10. 디버깅 정보 (콘솔)
+        // ==========================================
+        console.log('Leaflet 버전:', L.version);
+        console.log('화면 크기:', window.innerWidth, 'x', window.innerHeight);
+    </script>
+</body>
+</html>
