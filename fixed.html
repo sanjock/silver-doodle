@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>필지-도로 접면 분석 실전 데모</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+            background: #f5f7fa;
+        }
+        
+        .container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 26px;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            min-height: 0;
+        }
+        
+        .control-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .sample-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .sample-btn {
+            padding: 8px 12px;
+            background: #ecf0f1;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .sample-btn:hover {
+            background: #3498db;
+            color: white;
+        }
+        
+        .analyze-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+            transition: transform 0.2s;
+        }
+        
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .result-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 14px;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-label {
+            color: #7f8c8d;
+        }
+        
+        .result-value {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .result-value.success {
+            color: #27ae60;
+        }
+        
+        .result-value.danger {
+            color: #e74c3c;
+        }
+        
+        .map-container {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            margin-right: 8px;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #856404;
+            line-height: 1.5;
+        }
+        
+        .info-box {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #0c5460;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ 필지-도로 접면 분석 시스템</h1>
+            <p>부동산 용적률 산정을 위한 자동 접도 판정 도구 - 실전 데모</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="section">
+                    <div class="section-title">📍 분석 지역 입력</div>
+                    <div class="info-box">
+                        <strong>💡 사용 방법:</strong><br>
+                        샘플 데이터 버튼을 클릭하거나<br>
+                        직접 좌표를 입력하세요
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>지번 (참고용)</label>
+                        <input type="text" id="jibun" placeholder="서울 마포구 연남동 123-45" readonly>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>필지 중심 좌표 (위도, 경도)</label>
+                        <input type="text" id="centerCoord" placeholder="37.5665, 126.9780">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>도로 버퍼 거리 (미터)</label>
+                        <input type="number" id="bufferDistance" value="3" min="1" max="10">
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">📋 샘플 시나리오</div>
+                    <div class="sample-buttons">
+                        <button class="sample-btn" onclick="loadSample(1)">✅ 접도 가능</button>
+                        <button class="sample-btn" onclick="loadSample(2)">❌ 맹지</button>
+                        <button class="sample-btn" onclick="loadSample(3)">⚠️ 경계선</button>
+                        <button class="sample-btn" onclick="loadSample(4)">🏘️ 복잡 필지</button>
+                    </div>
+                </div>
+                
+                <button class="analyze-btn" onclick="analyzeParcel()">
+                    🔍 분석 시작
+                </button>
+                
+                <div class="result-panel" id="resultPanel" style="display: none;">
+                    <div class="section-title">📊 분석 결과</div>
+                    <div class="result-item">
+                        <span class="result-label">접도 판정</span>
+                        <span class="result-value" id="resultStatus">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">접촉 길이</span>
+                        <span class="result-value" id="resultLength">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">필지 면적</span>
+                        <span class="result-value" id="resultArea">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">도로 폭</span>
+                        <span class="result-value" id="resultWidth">-</span>
+                    </div>
+                </div>
+                
+                <div class="warning-box" style="margin-top: 20px;">
+                    <strong>⚠️ 주의사항</strong><br>
+                    본 결과는 참고용이며,<br>
+                    최종 판단은 전문가 검증이 필요합니다.
+                </div>
+            </div>
+            
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 전역 변수
+        let map = null;
+        let layers = {
+            parcel: null,
+            road: null,
+            buffer: null,
+            intersection: null
+        };
+        
+        // 지도 초기화 함수
+        function initializeMap() {
+            console.log('지도 초기화 시작...');
+            
+            // 지도 생성
+            map = L.map('map', {
+                center: [37.5665, 126.9780],
+                zoom: 17,
+                zoomControl: true,
+                attributionControl: true,
+                preferCanvas: false,
+                renderer: L.canvas()
+            });
+            
+            // 타일 레이어 추가
+            const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+                minZoom: 5,
+                keepBuffer: 2,
+                updateWhenZooming: false,
+                updateWhenIdle: true,
+                crossOrigin: true
+            });
+            
+            tileLayer.addTo(map);
+            
+            // 레이어 그룹 초기화
+            layers.parcel = L.layerGroup().addTo(map);
+            layers.road = L.layerGroup().addTo(map);
+            layers.buffer = L.layerGroup().addTo(map);
+            layers.intersection = L.layerGroup().addTo(map);
+            
+            // 범례 추가
+            const legend = L.control({position: 'bottomright'});
+            legend.onAdd = function(map) {
+                const div = L.DomUtil.create('div', 'legend');
+                div.innerHTML = `
+                    <div class="legend-title">범례</div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(52, 152, 219, 0.4); border: 2px solid #3498db;"></div>
+                        <span>필지 (대상 토지)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(231, 76, 60, 0.3); border: 2px solid #e74c3c;"></div>
+                        <span>도로 버퍼 (±3m)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(46, 204, 113, 0.5);"></div>
+                        <span>교차 영역 (접촉부)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #95a5a6;"></div>
+                        <span>도로 중앙선</span>
+                    </div>
+                `;
+                return div;
+            };
+            legend.addTo(map);
+            
+            console.log('지도 초기화 완료');
+        }
+        
+        // 지도 크기 재조정
+        function fixMapSize() {
+            console.log('지도 크기 재조정...');
+            const delays = [0, 100, 250, 500];
+            
+            delays.forEach(delay => {
+                setTimeout(() => {
+                    if (map) {
+                        map.invalidateSize({
+                            animate: false,
+                            pan: false
+                        });
+                        console.log(`invalidateSize 실행 (${delay}ms)`);
+                    }
+                }, delay);
+            });
+        }
+        
+        // 샘플 데이터
+        const samples = {
+            1: {
+                name: "서울 마포구 연남동 123-45 (접도 가능)",
+                center: [37.5665, 126.9780],
+                parcel: [
+                    [37.5670, 126.9775],
+                    [37.5670, 126.9785],
+                    [37.5660, 126.9785],
+                    [37.5660, 126.9775]
+                ],
+                road: [
+                    [37.5668, 126.9770],
+                    [37.5668, 126.9790]
+                ]
+            },
+            2: {
+                name: "서울 강남구 역삼동 456-78 (맹지)",
+                center: [37.4979, 127.0276],
+                parcel: [
+                    [37.4985, 127.0270],
+                    [37.4985, 127.0280],
+                    [37.4975, 127.0280],
+                    [37.4975, 127.0270]
+                ],
+                road: [
+                    [37.4990, 127.0265],
+                    [37.4990, 127.0285]
+                ]
+            },
+            3: {
+                name: "서울 송파구 잠실동 789-12 (경계 케이스)",
+                center: [37.5133, 127.1028],
+                parcel: [
+                    [37.5138, 127.1023],
+                    [37.5138, 127.1033],
+                    [37.5128, 127.1033],
+                    [37.5128, 127.1023]
+                ],
+                road: [
+                    [37.5137, 127.1018],
+                    [37.5137, 127.1038]
+                ]
+            },
+            4: {
+                name: "서울 서초구 서초동 234-56 (복잡 필지)",
+                center: [37.4837, 127.0324],
+                parcel: [
+                    [37.4843, 127.0318],
+                    [37.4843, 127.0328],
+                    [37.4840, 127.0330],
+                    [37.4835, 127.0328],
+                    [37.4832, 127.0320],
+                    [37.4835, 127.0318]
+                ],
+                road: [
+                    [37.4841, 127.0315],
+                    [37.4841, 127.0333]
+                ]
+            }
+        };
+        
+        let currentSample = null;
+        
+        // 샘플 로드
+        function loadSample(num) {
+            currentSample = samples[num];
+            document.getElementById('jibun').value = currentSample.name;
+            document.getElementById('centerCoord').value = 
+                `${currentSample.center[0]}, ${currentSample.center[1]}`;
+            
+            map.setView(currentSample.center, 18);
+            setTimeout(() => analyzeParcel(), 300);
+        }
+        
+        // 거리 계산
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        // 분석 실행
+        function analyzeParcel() {
+            if (!currentSample) {
+                alert('샘플 데이터를 먼저 선택해주세요');
+                return;
+            }
+            
+            // 기존 레이어 제거
+            Object.values(layers).forEach(layer => layer.clearLayers());
+            
+            const bufferDist = parseFloat(document.getElementById('bufferDistance').value);
+            const bufferDegree = bufferDist / 111000;
+            
+            // 필지 그리기
+            const parcelPolygon = L.polygon(currentSample.parcel, {
+                color: '#3498db',
+                weight: 3,
+                fillColor: '#3498db',
+                fillOpacity: 0.2
+            }).addTo(layers.parcel);
+            
+            parcelPolygon.bindPopup(`
+                <strong>필지 정보</strong><br>
+                지번: ${currentSample.name}<br>
+                면적: 약 ${(turf.area(parcelPolygon.toGeoJSON())).toFixed(2)} m²
+            `);
+            
+            // 도로 중앙선 그리기
+            const roadLine = L.polyline(currentSample.road, {
+                color: '#95a5a6',
+                weight: 3,
+                dashArray: '10, 10'
+            }).addTo(layers.road);
+            
+            roadLine.bindPopup('<strong>도로 중앙선</strong>');
+            
+            // 도로 버퍼 그리기
+            currentSample.road.forEach(point => {
+                L.circle(point, {
+                    radius: bufferDist,
+                    color: '#e74c3c',
+                    weight: 2,
+                    fillColor: '#e74c3c',
+                    fillOpacity: 0.15
+                }).addTo(layers.buffer);
+            });
+            
+            // 접도 판정 로직
+            const parcelCenter = parcelPolygon.getBounds().getCenter();
+            const roadPoint = currentSample.road[0];
+            const distanceToRoad = calculateDistance(
+                parcelCenter.lat, parcelCenter.lng,
+                roadPoint[0], roadPoint[1]
+            );
+            
+            const isContacted = distanceToRoad <= (bufferDist + 50);
+            const contactLength = isContacted ? 
+                Math.max(2, Math.min(20, 25 - distanceToRoad / 2)) : 0;
+            
+            // 접촉 영역 표시
+            if (isContacted) {
+                const contactPoint = [
+                    (parcelCenter.lat + roadPoint[0]) / 2,
+                    (parcelCenter.lng + roadPoint[1]) / 2
+                ];
+                
+                L.circle(contactPoint, {
+                    radius: contactLength / 2,
+                    color: '#2ecc71',
+                    weight: 0,
+                    fillColor: '#2ecc71',
+                    fillOpacity: 0.5
+                }).addTo(layers.intersection);
+            }
+            
+            // 결과 패널 업데이트
+            document.getElementById('resultPanel').style.display = 'block';
+            
+            const statusEl = document.getElementById('resultStatus');
+            if (isContacted && contactLength >= 2) {
+                statusEl.textContent = '✅ 접도 가능';
+                statusEl.className = 'result-value success';
+            } else {
+                statusEl.textContent = '❌ 접도 불가';
+                statusEl.className = 'result-value danger';
+            }
+            
+            document.getElementById('resultLength').textContent = `${contactLength.toFixed(2)}m`;
+            document.getElementById('resultArea').textContent = 
+                `약 ${(turf.area(parcelPolygon.toGeoJSON())).toFixed(2)} m² (${(turf.area(parcelPolygon.toGeoJSON()) / 3.3058).toFixed(1)}평)`;
+            document.getElementById('resultWidth').textContent = `${bufferDist * 2}m (편도 ${bufferDist}m)`;
+            
+            // 지도 범위 맞추기
+            const bounds = parcelPolygon.getBounds();
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+        
+        // Turf.js 간단 구현
+        const turf = {
+            area: function(geojson) {
+                const coords = geojson.geometry.coordinates[0];
+                let area = 0;
+                for (let i = 0; i < coords.length - 1; i++) {
+                    const [lon1, lat1] = coords[i];
+                    const [lon2, lat2] = coords[i + 1];
+                    area += (lon2 - lon1) * (lat2 + lat1) / 2;
+                }
+                return Math.abs(area) * 111000 * 111000 * Math.cos(coords[0][1] * Math.PI / 180);
+            }
+        };
+        
+        // 초기화 시퀀스
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM 로드 완료');
+            
+            initializeMap();
+            fixMapSize();
+            
+            setTimeout(() => {
+                loadSample(1);
+                fixMapSize();
+            }, 500);
+        });
+        
+        // 창 크기 변경 대응
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                console.log('창 크기 변경 감지');
+                fixMapSize();
+            }, 250);
+        });
+    </script>
+</body>
+</html>
